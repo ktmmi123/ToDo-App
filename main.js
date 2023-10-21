@@ -52,9 +52,7 @@ function createTask() {
     };
     tasks.push(task);
 
-    var myHeaders = new Headers();
-    myHeaders.append("Content-Type", "application/json");
-    myHeaders.append("Authorization", "Bearer mErAbJ0UQaJHWQcYSquHtbzu2aQ7GJFU");
+    
     
     var raw = JSON.stringify({
       "title": "123",
