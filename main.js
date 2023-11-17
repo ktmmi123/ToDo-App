@@ -1,42 +1,21 @@
-const tasks = [
-    {
-        id: 1,
-        name: 'Task 1',
-        completed: false
-    },
-    {
-        id: 2,
-        name: 'Task 2',
-        completed: true
-    }
-];
-let lastTaskId = 2;
+const tasks = [];
+let lastTaskId = 0;
 
 let taskList;
 let addTask;
-let saveAllButton;
+
 // kui leht on brauseris laetud siis lisame esimesed taskid lehele
-
-
 window.addEventListener('load', () => {
     taskList = document.querySelector('#task-list');
     addTask = document.querySelector('#add-task');
-    saveAllButton = document.querySelector('#save-all');
-    saveAllButton.addEventListener('click', () => {
-        saveAllTasks(); 
-    });
 
-    // Add this section after defining the addTask button
-    // kui nuppu vajutatakse siis lisatakse uus task
+    fetchTasks();
+
     addTask.addEventListener('click', () => {
         const task = createTask();
-        const taskRow = createTaskRow(task);
-        taskList.appendChild(taskRow);
+        renderTask(task);
     });
-
 });
-
-
 
 function renderTask(task) {
     const taskRow = createTaskRow(task);
@@ -45,58 +24,85 @@ function renderTask(task) {
 
 function createTask() {
     lastTaskId++;
+
     const task = {
         id: lastTaskId,
-        name: 'Task ' + lastTaskId,
-        completed: false
+        title: 'New Task ' + lastTaskId,
+        desc: '',
+        marked_as_done: false,
+        created_at: new Date().toLocaleString() 
     };
-    tasks.push(task);
 
-    
-    
-    var raw = JSON.stringify({
-      "title": "123",
-      "desc": ""
-    });
-    
-    var requestOptions = {
-      method: 'POST',
-      headers: myHeaders,
-      body: raw,
-      redirect: 'follow'
-    };
-    
-    fetch("http://demo2.z-bit.ee/tasks", requestOptions)
-      .then(response => response.text())
-      .then(result => console.log(result))
-      .catch(error => console.log('error', error));
+    fetch('http://demo2.z-bit.ee/tasks', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer mErAbJ0UQaJHWQcYSquHtbzu2aQ7GJFU',
+        },
+        body: JSON.stringify(task),
+    })
+    .then(response => response.json())
+    .then(result => {
+        task.id = result.id; 
+        tasks.push(task);
+    })
+    .catch(error => console.error('Error adding task:', error));
 
     return task;
 }
 
+function deleteTask(task, taskRow) {
+    
+    fetch(`http://demo2.z-bit.ee/tasks/${task.id}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': 'Bearer mErAbJ0UQaJHWQcYSquHtbzu2aQ7GJFU',
+        },
+    })
+    .then(response => {
+        if (response.ok) {
+            taskList.removeChild(taskRow);
+            tasks.splice(tasks.indexOf(task), 1);
+        } else {
+            console.error('Error deleting task:', response.statusText);
+        }
+    })
+    .catch(error => console.error('Error deleting task:', error));
+}
+
+function fetchTasks() {
+    
+    fetch('http://demo2.z-bit.ee/tasks', {
+        method: 'GET',
+        headers: {
+            'Authorization': 'Bearer mErAbJ0UQaJHWQcYSquHtbzu2aQ7GJFU',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        tasks.push(...data); 
+        tasks.forEach(renderTask); 
+    })
+    .catch(error => console.error('Error fetching tasks:', error));
+}
+
 function createTaskRow(task) {
-    let taskRow = document.querySelector('[data-template="task-row"]').cloneNode(true);
+    const taskRow = document.querySelector('[data-template="task-row"]').cloneNode(true);
     taskRow.removeAttribute('data-template');
 
-    // Täidame vormi väljad andmetega
     const name = taskRow.querySelector("[name='name']");
-    name.innerText = task.name;
+    name.value = task.title;
 
     const checkbox = taskRow.querySelector("[name='completed']");
-    checkbox.checked = task.completed;
+    checkbox.checked = task.marked_as_done;
 
     const deleteButton = taskRow.querySelector('.delete-task');
-    deleteButton.addEventListener('click', () => {
-        taskList.removeChild(taskRow);
-        tasks.splice(tasks.indexOf(task), 1);
-    });
+    deleteButton.addEventListener('click', () => deleteTask(task, taskRow));
 
-    // Valmistame checkboxi ette vajutamiseks
     hydrateAntCheckboxes(taskRow);
 
     return taskRow;
 }
-
 
 function createAntCheckbox() {
     const checkbox = document.querySelector('[data-template="ant-checkbox"]').cloneNode(true);
@@ -119,7 +125,6 @@ function hydrateAntCheckboxes(element) {
             continue;
         wrapper.__hydrated = true;
 
-
         const checkbox = wrapper.querySelector('.ant-checkbox');
 
         // Kontrollime kas checkbox peaks juba olema checked, see on ainult erikujundusega checkboxi jaoks
@@ -127,7 +132,7 @@ function hydrateAntCheckboxes(element) {
         if (input.checked) {
             checkbox.classList.add('ant-checkbox-checked');
         }
-        
+
         // Kui checkboxi või label'i peale vajutatakse siis muudetakse checkboxi olekut
         wrapper.addEventListener('click', () => {
             input.checked = !input.checked;
